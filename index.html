@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -366,10 +367,7 @@ function renderExtintores(){
         <span class="chev">⌄</span>
       </div>
       <div class="ext-card-body">
-        <div class="grid2">
-          <div class="field"><label>Código / N.°</label><input value="${esc(ex.codigo)}" oninput="updateExt('${ex.id}','codigo',this.value)"></div>
-          <div class="field"><label>Capacidad</label><input value="${esc(ex.capacidad)}" placeholder="ej. 10 lb" oninput="updateExt('${ex.id}','capacidad',this.value)"></div>
-        </div>
+        <div class="field"><label>Capacidad</label><input value="${esc(ex.capacidad)}" placeholder="ej. 10 lb" oninput="updateExt('${ex.id}','capacidad',this.value)"></div>
         <div class="field"><label>Ubicación exacta</label><input value="${esc(ex.ubicacion)}" oninput="updateExt('${ex.id}','ubicacion',this.value)"></div>
         <div class="grid2">
           <div class="field"><label>Tipo de agente</label>
@@ -381,10 +379,6 @@ function renderExtintores(){
         </div>
         <div class="grid2">
           <div class="field"><label>Marca</label><input value="${esc(ex.marca)}" oninput="updateExt('${ex.id}','marca',this.value)"></div>
-          <div class="field"><label>Modelo</label><input value="${esc(ex.modelo)}" oninput="updateExt('${ex.id}','modelo',this.value)"></div>
-        </div>
-        <div class="grid2">
-          <div class="field"><label>N.° de serie</label><input value="${esc(ex.serie)}" oninput="updateExt('${ex.id}','serie',this.value)"></div>
           <div class="field"><label>Último servicio</label><input value="${esc(ex.ultimoServicio)}" oninput="updateExt('${ex.id}','ultimoServicio',this.value)"></div>
         </div>
 
@@ -424,11 +418,14 @@ function renderExtintores(){
 function updateExt(id, field, value){
   const ex = current.extintores.find(e=>e.id===id);
   ex[field]=value;
-  if(field==='codigo' || field==='ubicacion' || field==='tipo'){
-    // refresh header text without collapsing open card
-    const wasOpenIds = current.extintores.filter(e=>e.open).map(e=>e.id);
-    renderExtintores();
-    // restore focus not critical; header text updates on blur-safe re-render
+  if(field==='ubicacion' || field==='tipo'){
+    // Actualiza solo el texto del encabezado, sin redibujar toda la tarjeta
+    // (redibujarla en cada tecla hacía que el campo perdiera el foco al escribir).
+    const card = document.getElementById('card-'+id);
+    if(card){
+      const t2 = card.querySelector('.t2');
+      if(t2) t2.textContent = (ex.ubicacion ? ex.ubicacion : 'Sin ubicación') + (ex.tipo ? ' · '+ex.tipo : '');
+    }
   }
 }
 function setCheck(id, key, val){
@@ -589,7 +586,6 @@ async function guardarInspeccion(){
     await conReintentos(()=>guardarInspeccionFS(current), 3);
     toast('Inspección guardada y sincronizada ✓');
     current = blankInspeccion();
-    current.tecnico = sesion ? sesion.nombre : '';
     renderNueva();
   }catch(e){
     console.error(e);
@@ -729,9 +725,9 @@ async function exportarPDF(id){
 
   insp.extintores.forEach((ex, i)=>{
     checkBreak(40);
-    sectionTitle('Extintor '+(i+1)+ (ex.codigo? ' — '+ex.codigo : ''));
+    sectionTitle('Extintor '+(i+1));
     kv('Ubicación', ex.ubicacion); kv('Tipo / Capacidad', (ex.tipo||'')+' / '+(ex.capacidad||'—'));
-    kv('Marca / Modelo', (ex.marca||'—')+' / '+(ex.modelo||'—')); kv('N. de serie', ex.serie);
+    kv('Marca', ex.marca||'—');
     kv('Año fabricación', ex.anio); kv('Último servicio', ex.ultimoServicio);
     const rce = {'CONFORME':[31,122,77],'OBSERVACION':[138,100,16],'NO CONFORME':[179,38,30],'RETIRAR':[179,38,30]}[ex.resultado]||[20,20,20];
     doc.setFont('helvetica','bold'); doc.setFontSize(10.5); doc.setTextColor(rce[0],rce[1],rce[2]);
@@ -1035,7 +1031,6 @@ function entrarComo(profile){
   const cs = document.getElementById('btn-cerrar-sesion');
   cs.textContent = 'Salir (' + sesion.nombre.split(' ')[0] + ')';
   document.getElementById('gear-btn').style.display = sesion.rol==='admin' ? 'inline-block' : 'none';
-  current.tecnico = sesion.nombre;
   switchTab('nueva');
   renderNueva();
   if(sesion.rol==='admin') iniciarChequeoPendientes();
